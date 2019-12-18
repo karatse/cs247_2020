@@ -1,0 +1,1 @@
+## Please see the [Wiki](https://bitbucket.org/kaust_cs247/cs247_2020/wiki/Home) for assignments descriptions. ##
