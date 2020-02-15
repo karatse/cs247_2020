@@ -28,12 +28,12 @@ GLfloat coords[][3] = {
 };
 
 // Animation
-float x_translation = 0;
-float y_translation = 0;
-float z_translation = -4.5;
-int angle = 0;
+GLfloat x_translation = 0;
+GLfloat y_translation = 0;
+GLfloat z_translation = -4.5;
+GLfloat angle = 0;
 bool perspective = true;
-float factor = 1;
+GLfloat factor = 1;
 
 static void display(void) {
 	//draw the mesh here
@@ -79,17 +79,17 @@ static void display(void) {
 	glFlush();
 }
 
-void x_translate(float value) {
+void x_translate(GLfloat value) {
 	x_translation += value;
 	printf("translation in X direction by: %g\n", x_translation);
 }
 
-void y_translate(float value) {
+void y_translate(GLfloat value) {
 	y_translation += value;
 	printf("translation in Z direction by: %g\n", y_translation);
 }
 
-void z_translate(float value) {
+void z_translate(GLfloat value) {
 	z_translation += value;
 	printf("translation in Z direction by: %g\n", z_translation);
 }
@@ -102,7 +102,7 @@ void rotate(int value) {
 	else if (angle < 0) {
 		angle += 360;
 	}
-	printf("rotation angle is: %d\n", angle);
+	printf("rotation angle is: %f\n", angle);
 }
 
 GLdouble aspect = 1;
@@ -131,7 +131,7 @@ void toggle_projection() {
 	}
 }
 
-void scale(float value) {
+void scale(GLfloat value) {
 	factor *= value;
 	printf("scale factor is: %f\n", factor);
 }
@@ -154,28 +154,28 @@ void keyboard(unsigned char key, int x, int y) {
 		rotate(2);
 		break;
 	case 'z':
-		scale(0.9);
+		scale(0.9f);
 		break;
 	case 'x':
-		scale(1.1);
+		scale(1.1f);
 		break;
 	case 'w':
-		y_translate(0.1);
+		y_translate(0.1f);
 		break;
 	case 's':
-		y_translate(-0.1);
+		y_translate(-0.1f);
 		break;
 	case 'd':
-		x_translate(0.1);
+		x_translate(0.1f);
 		break;
 	case 'a':
-		x_translate(-0.1);
+		x_translate(-0.1f);
 		break;
 	case 'q':
-		z_translate(0.1);
+		z_translate(0.1f);
 		break;
 	case 'e':
-		z_translate(-0.1);
+		z_translate(-0.1f);
 		break;
 	case ' ':
 		toggle_projection();

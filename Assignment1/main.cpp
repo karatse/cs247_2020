@@ -210,6 +210,12 @@ static void key(unsigned char keyPressed, int x, int y)
 	case '2':
 		LoadData("../Datasets/skewed_head.dat");
 		break;
+	case '3':
+		LoadData("../Datasets/dataset1.dat");
+		break;
+	case '4':
+		LoadData("../Datasets/dataset2.dat");
+		break;
 	case 'b':
 		NextClearColor();
 		break;
@@ -234,17 +240,10 @@ static void motion(int x, int y) {}
 
 static void reshape(int w, int h)
 {
-	float aspect = (float)w / (float)h;
-
 	viewport_x = w;
 	viewport_y = h;
 
 	glViewport(0, 0, viewport_x, viewport_y);
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-
-	glViewport(0, 0, viewport_x, viewport_y);
-
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
@@ -289,32 +288,21 @@ void LoadData(char* filename)
 		return;
 	}
 
-	memset(vol_dim, 0, sizeof(unsigned short) * 3);
-
 	//read volume dimension
-	fread(&vol_dim[0], sizeof(unsigned short), 1, fp);
-	fread(&vol_dim[1], sizeof(unsigned short), 1, fp);
-	fread(&vol_dim[2], sizeof(unsigned short), 1, fp);
+	fread(vol_dim, sizeof(unsigned short), 3, fp);
 
-	fprintf(stderr, "volume dimensions: x: %i, y: %i, z:%i \n", vol_dim[0], vol_dim[1], vol_dim[2]);
+	fprintf(stderr, "volume dimensions: x: %i, y: %i, z:%i\n", vol_dim[0], vol_dim[1], vol_dim[2]);
 
-	if (data_array != NULL) {
-		delete[] data_array;
-	}
+	size_t size = (size_t) vol_dim[0] * vol_dim[1] * vol_dim[2];
+	data_array = new unsigned short[size]; //for intensity volume
 
-	data_array = new unsigned short[vol_dim[0] * vol_dim[1] * vol_dim[2]]; //for intensity volume
-
-	for (int z = 0; z < vol_dim[2]; z++) {
-		for (int y = 0; y < vol_dim[1]; y++) {
-			for (int x = 0; x < vol_dim[0]; x++) {
-
-				fread(&data_array[x + (y * vol_dim[0]) + (z * vol_dim[0] * vol_dim[1])], sizeof(unsigned short), 1, fp);
-				data_array[x + (y * vol_dim[0]) + (z * vol_dim[0] * vol_dim[1])] = data_array[x + (y * vol_dim[0]) + (z * vol_dim[0] * vol_dim[1])] << 4;
-			}
-		}
-	}
+	fread(data_array, sizeof(unsigned short), size, fp);
 
 	fclose(fp);
+
+	for (int i = 0; i < size; i++) {
+		data_array[i] <<= 4;
+	}
 
 	current_slice[0] = vol_dim[0] / 2;
 	current_slice[1] = vol_dim[1] / 2;
@@ -322,6 +310,7 @@ void LoadData(char* filename)
 
 	DownloadVolumeAsTexture();
 
+	delete[] data_array;
 	data_loaded = true;
 }
 
