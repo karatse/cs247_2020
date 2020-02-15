@@ -79,6 +79,19 @@ static void NextClearColor(void)
 	}
 }
 
+void adjustAspect(GLfloat& w, GLfloat& h, GLfloat volume_aspect)
+{
+	GLfloat viewport_aspect = viewport_x / (GLfloat)viewport_y;
+	if (viewport_aspect < volume_aspect) {
+		w = 1;
+		h = viewport_aspect / volume_aspect;
+	}
+	else {
+		w = volume_aspect / viewport_aspect;
+		h = 1;
+	}
+}
+
 // ==========================================================================
 // GLUT
 static void display(void)
@@ -91,7 +104,78 @@ static void display(void)
 	// TODO: Draw with OpenGL
 	// ================================================================================
 
+	if (data_loaded) {
+		glEnable(GL_TEXTURE_3D);
 
+		GLfloat slice0 = current_slice[0] / (GLfloat)vol_dim[0];
+		GLfloat slice1 = current_slice[1] / (GLfloat)vol_dim[1];
+		GLfloat slice2 = current_slice[2] / (GLfloat)vol_dim[2];
+
+		GLfloat texCoord[3][4][3] = {
+			{{slice0, 0.0f, 0.0f}, {slice0, 1.0f, 0.0f}, {slice0, 1.0f, 1.0f}, {slice0, 0.0f, 1.0f}},
+			{{0.0f, slice1, 0.0f}, {1.0f, slice1, 0.0f}, {1.0f, slice1, 1.0f}, {0.0f, slice1, 1.0f}},
+			{{0.0f, 0.0f, slice2}, {1.0f, 0.0f, slice2}, {1.0f, 1.0f, slice2}, {0.0f, 1.0f, slice2}}
+		};
+		GLfloat volume_aspect[3]{
+			vol_dim[2] / (GLfloat)vol_dim[1],
+			vol_dim[0] / (GLfloat)vol_dim[2],
+			vol_dim[0] / (GLfloat)vol_dim[1]
+		};
+
+		glColor3f(1.0f, 1.0f, 1.0f);
+		glBegin(GL_QUADS);
+
+		GLfloat w;
+		GLfloat h;
+		int axis = 0;
+		adjustAspect(w, h, volume_aspect[axis]);
+
+		glTexCoord3fv(texCoord[axis][0]);
+		glVertex3f(0.0f, 0.0f, 0.0f);
+
+		glTexCoord3fv(texCoord[axis][1]);
+		glVertex3f(0, h, 0.0f);
+
+		glTexCoord3fv(texCoord[axis][2]);
+		glVertex3f(w, h, 0.0f);
+
+		glTexCoord3fv(texCoord[axis][3]);
+		glVertex3f(w, 0.0f, 0.0f);
+
+		axis = 1;
+		adjustAspect(w, h, volume_aspect[axis]);
+
+		glTexCoord3fv(texCoord[axis][0]);
+		glVertex3f(-w, -h, 0.0f);
+
+		glTexCoord3fv(texCoord[axis][1]);
+		glVertex3f(0.0f, -h, 0.0f);
+
+		glTexCoord3fv(texCoord[axis][2]);
+		glVertex3f(0.0f, 0.0f, 0.0f);
+
+		glTexCoord3fv(texCoord[axis][3]);
+		glVertex3f(-w, 0.0f, 0.0f);
+
+		axis = 2;
+		adjustAspect(w, h, volume_aspect[axis]);
+
+		glTexCoord3fv(texCoord[axis][0]);
+		glVertex3f(-w, 0.0f, 0.0f);
+
+		glTexCoord3fv(texCoord[axis][1]);
+		glVertex3f(0.0f, 0.0f, 0.0f);
+
+		glTexCoord3fv(texCoord[axis][2]);
+		glVertex3f(0.0f, h, 0.0f);
+
+		glTexCoord3fv(texCoord[axis][3]);
+		glVertex3f(-w, h, 0.0f);
+
+		glEnd();
+
+		glDisable(GL_TEXTURE_3D);
+	}
 
 	glFlush();
 	glutSwapBuffers();
@@ -128,6 +212,9 @@ static void key(unsigned char keyPressed, int x, int y)
 		break;
 	case 'b':
 		NextClearColor();
+		break;
+	case 27:
+		exit(0);
 		break;
 	default:
 		fprintf(stderr, "\nKeyboard commands:\n\n"
@@ -245,6 +332,18 @@ void DownloadVolumeAsTexture()
 	// ================================================================================
 	// TODO: Set up and download texture to GPU
 	// ================================================================================
+
+	glEnable(GL_TEXTURE_3D);
+
+	glGenTextures(1, &vol_texture);
+	glBindTexture(GL_TEXTURE_3D, vol_texture);
+
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexImage3D(GL_TEXTURE_3D, 0, GL_INTENSITY, vol_dim[0], vol_dim[1], vol_dim[2], 0, GL_LUMINANCE, GL_UNSIGNED_SHORT, data_array);
 }
 
 int main(int argc, char* argv[])
