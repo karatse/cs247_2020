@@ -112,7 +112,7 @@ static void display(void)
 		GLfloat slice2 = current_slice[2] / (GLfloat)vol_dim[2];
 
 		GLfloat texCoord[3][4][3] = {
-			{{slice0, 0.0f, 0.0f}, {slice0, 1.0f, 0.0f}, {slice0, 1.0f, 1.0f}, {slice0, 0.0f, 1.0f}},
+			{{slice0, 0.0f, 0.0f}, {slice0, 0.0f, 1.0f}, {slice0, 1.0f, 1.0f}, {slice0, 1.0f, 0.0f}},
 			{{0.0f, slice1, 0.0f}, {1.0f, slice1, 0.0f}, {1.0f, slice1, 1.0f}, {0.0f, slice1, 1.0f}},
 			{{0.0f, 0.0f, slice2}, {1.0f, 0.0f, slice2}, {1.0f, 1.0f, slice2}, {0.0f, 1.0f, slice2}}
 		};
@@ -134,13 +134,13 @@ static void display(void)
 		glVertex3f(0.0f, 0.0f, 0.0f);
 
 		glTexCoord3fv(texCoord[axis][1]);
-		glVertex3f(0, h, 0.0f);
+		glVertex3f(w, 0.0f, 0.0f);
 
 		glTexCoord3fv(texCoord[axis][2]);
 		glVertex3f(w, h, 0.0f);
 
 		glTexCoord3fv(texCoord[axis][3]);
-		glVertex3f(w, 0.0f, 0.0f);
+		glVertex3f(0, h, 0.0f);
 
 		axis = 1;
 		adjustAspect(w, h, volume_aspect[axis]);
@@ -293,7 +293,7 @@ void LoadData(char* filename)
 
 	fprintf(stderr, "volume dimensions: x: %i, y: %i, z:%i\n", vol_dim[0], vol_dim[1], vol_dim[2]);
 
-	size_t size = (size_t) vol_dim[0] * vol_dim[1] * vol_dim[2];
+	size_t size = (size_t)vol_dim[0] * vol_dim[1] * vol_dim[2];
 	data_array = new unsigned short[size]; //for intensity volume
 
 	fread(data_array, sizeof(unsigned short), size, fp);
