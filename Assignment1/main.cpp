@@ -332,6 +332,8 @@ int main(int argc, char* argv[])
 	// Initialize the "OpenGL Extension Wrangler" library
 	glewInit();
 
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_COLOR);
 	// query and display OpenGL version
 	getGlVersion(&gl_major, &gl_minor);
 	printf("GL_VERSION major=%d minor=%d\n", gl_major, gl_minor);
