@@ -79,19 +79,6 @@ static void NextClearColor(void)
 	}
 }
 
-void adjustAspect(GLfloat& w, GLfloat& h, GLfloat volume_aspect)
-{
-	GLfloat viewport_aspect = viewport_x / (GLfloat)viewport_y;
-	if (viewport_aspect < volume_aspect) {
-		w = 1;
-		h = viewport_aspect / volume_aspect;
-	}
-	else {
-		w = volume_aspect / viewport_aspect;
-		h = 1;
-	}
-}
-
 // ==========================================================================
 // GLUT
 static void display(void)
@@ -135,7 +122,17 @@ static void display(void)
 		for (int axis = 0; axis < 3; axis++) {
 			GLfloat w;
 			GLfloat h;
-			adjustAspect(w, h, volume_aspect[axis]);
+			GLfloat aspect = volume_aspect[axis];
+			// adjust aspect ratio of slice
+			GLfloat viewport_aspect = viewport_x / (GLfloat)viewport_y;
+			if (viewport_aspect < aspect) {
+				w = 1;
+				h = viewport_aspect / aspect;
+			}
+			else {
+				w = aspect / viewport_aspect;
+				h = 1;
+			}
 
 			for (int j = 0; j < 4; j++) {
 				glTexCoord3fv(texCoord[axis][j]);
