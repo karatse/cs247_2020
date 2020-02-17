@@ -111,66 +111,37 @@ static void display(void)
 		GLfloat slice1 = current_slice[1] / (GLfloat)vol_dim[1];
 		GLfloat slice2 = current_slice[2] / (GLfloat)vol_dim[2];
 
-		GLfloat texCoord[3][4][3] = {
+		GLfloat texCoord[3][4][3]{
 			{{slice0, 0.0f, 0.0f}, {slice0, 0.0f, 1.0f}, {slice0, 1.0f, 1.0f}, {slice0, 1.0f, 0.0f}},
 			{{0.0f, slice1, 0.0f}, {1.0f, slice1, 0.0f}, {1.0f, slice1, 1.0f}, {0.0f, slice1, 1.0f}},
 			{{0.0f, 0.0f, slice2}, {1.0f, 0.0f, slice2}, {1.0f, 1.0f, slice2}, {0.0f, 1.0f, slice2}}
 		};
+
 		GLfloat volume_aspect[3]{
 			vol_dim[2] / (GLfloat)vol_dim[1],
 			vol_dim[0] / (GLfloat)vol_dim[2],
 			vol_dim[0] / (GLfloat)vol_dim[1]
 		};
 
+		GLfloat vertexCoord[3][4][2]{
+			{{0, 0}, {1, 0}, {1, 1}, {0, 1}},
+			{{-1, -1}, {0, -1}, {0, 0}, {-1, 0}},
+			{{-1, 0}, {0, 0}, {0, 1}, {-1, 1}}
+		};
+
 		glColor3f(1.0f, 1.0f, 1.0f);
 		glBegin(GL_QUADS);
 
-		GLfloat w;
-		GLfloat h;
-		int axis = 0;
-		adjustAspect(w, h, volume_aspect[axis]);
+		for (int axis = 0; axis < 3; axis++) {
+			GLfloat w;
+			GLfloat h;
+			adjustAspect(w, h, volume_aspect[axis]);
 
-		glTexCoord3fv(texCoord[axis][0]);
-		glVertex3f(0.0f, 0.0f, 0.0f);
-
-		glTexCoord3fv(texCoord[axis][1]);
-		glVertex3f(w, 0.0f, 0.0f);
-
-		glTexCoord3fv(texCoord[axis][2]);
-		glVertex3f(w, h, 0.0f);
-
-		glTexCoord3fv(texCoord[axis][3]);
-		glVertex3f(0, h, 0.0f);
-
-		axis = 1;
-		adjustAspect(w, h, volume_aspect[axis]);
-
-		glTexCoord3fv(texCoord[axis][0]);
-		glVertex3f(-w, -h, 0.0f);
-
-		glTexCoord3fv(texCoord[axis][1]);
-		glVertex3f(0.0f, -h, 0.0f);
-
-		glTexCoord3fv(texCoord[axis][2]);
-		glVertex3f(0.0f, 0.0f, 0.0f);
-
-		glTexCoord3fv(texCoord[axis][3]);
-		glVertex3f(-w, 0.0f, 0.0f);
-
-		axis = 2;
-		adjustAspect(w, h, volume_aspect[axis]);
-
-		glTexCoord3fv(texCoord[axis][0]);
-		glVertex3f(-w, 0.0f, 0.0f);
-
-		glTexCoord3fv(texCoord[axis][1]);
-		glVertex3f(0.0f, 0.0f, 0.0f);
-
-		glTexCoord3fv(texCoord[axis][2]);
-		glVertex3f(0.0f, h, 0.0f);
-
-		glTexCoord3fv(texCoord[axis][3]);
-		glVertex3f(-w, h, 0.0f);
+			for (int j = 0; j < 4; j++) {
+				glTexCoord3fv(texCoord[axis][j]);
+				glVertex2f(w * vertexCoord[axis][j][0], h * vertexCoord[axis][j][1]);
+			}
+		}
 
 		glEnd();
 
