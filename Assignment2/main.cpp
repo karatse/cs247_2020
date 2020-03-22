@@ -825,6 +825,8 @@ void MarchingSquares()
 	}
 }
 
+float epsilon = 0.001;
+
 void MarchingCubes()
 {
 	// =============================================================================
@@ -862,7 +864,7 @@ void MarchingCubes()
 					p[i].z = z + offset[i].z;
 					val[i] = data(p[i].x, p[i].y, p[i].z);
 
-					if (val[i] < isoValue) {
+					if (val[i] < isoValue - epsilon) {
 						cubeIndex |= 1u << i;
 					}
 				}
