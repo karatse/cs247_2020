@@ -642,8 +642,9 @@ void LoadData(char* filename)
 		delete[] data_array;
 	}
 
-	size_t size = vol_dim[0] * vol_dim[1] * vol_dim[2];
+	size_t size = (size_t) vol_dim[0] * vol_dim[1] * vol_dim[2];
 	data_array = new unsigned short[size]; //for intensity volume
+	memset(data_array, 0, sizeof(unsigned short) * size);
 	fread(data_array, sizeof(unsigned short), size, fp);
 	fclose(fp);
 
@@ -854,22 +855,20 @@ void MarchingCubes()
 			for (int z = 0; z < vol_dim[2] - 1; z++) {
 				Vertex p[8];
 				double val[8];
-				for (int i = 0; i < 8; i++) {
+				uint8_t cubeIndex = 0;
+				for (uint8_t i = 0; i < 8; i++) {
 					p[i].x = x + offset[i].x;
 					p[i].y = y + offset[i].y;
 					p[i].z = z + offset[i].z;
 					val[i] = data(p[i].x, p[i].y, p[i].z);
-				}
 
-				Vertex vertlist[12];
-				Vertex normaList[12];
-				uint8_t cubeIndex = 0;
-				for (uint8_t i = 0; i < 8; i++) {
 					if (val[i] < isoValue) {
 						cubeIndex |= 1u << i;
 					}
 				}
 
+				Vertex vertlist[12];
+				Vertex normaList[12];
 				for (uint8_t i = 0; i < 12; i++) {
 					uint16_t bit = 1u << i;
 					if (edgeTable3D[cubeIndex] & bit) {
@@ -882,7 +881,7 @@ void MarchingCubes()
 						double v2 = val[b];
 						Vertex n1 = midpointDiff(p1.x, p1.y, p1.z);
 						Vertex n2 = midpointDiff(p2.x, p2.y, p2.z);
-						double mu = (isoValue - v1) / (v2 - v1);
+						float mu = (isoValue - v1) / (v2 - v1);
 
 						Vertex& vertex = vertlist[i];
 						vertex.x = p1.x + mu * (p2.x - p1.x);
@@ -893,6 +892,9 @@ void MarchingCubes()
 						normal.x = n1.x + mu * (n2.x - n1.x);
 						normal.y = n1.y + mu * (n2.y - n1.y);
 						normal.z = n1.z + mu * (n2.z - n1.z);
+					}
+					else {
+						vertlist[i] = {};
 					}
 				}
 				for (int i = 0; triangleTable[cubeIndex][i] != -1; i++) {
@@ -917,7 +919,7 @@ void DrawContour(float w, float h)
 	glColor3f(0.2f, 0.5f, 0.7f);
 	glBegin(GL_LINES);
 	for (int i = 0; i < contour.size(); i++) {
-		glVertex2d(contour[i].x * w, contour[i].y * h);
+		glVertex2f(contour[i].x * w, contour[i].y * h);
 	}
 	glEnd();
 }
