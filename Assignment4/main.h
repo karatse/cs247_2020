@@ -125,8 +125,8 @@ void DownloadVolumeAsTexture(void);
 void UpdateTransferfunction(void);
 void DownloadTransferFunctionTexture(int tf_id);
 
-void RenderBackFaces( /* params */);
-void RenderFrontFaces( /* params */);
+void RenderBackFaces(float dim_x, float dim_y, float dim_z);
+void RenderFrontFaces(float dim_x, float dim_y, float dim_z);
 
 void RenderRaycastPass(void);
 

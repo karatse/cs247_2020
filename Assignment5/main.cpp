@@ -636,9 +636,9 @@ int main(int argc, char** argv)
 
 	NextClearColor();
 
-	filenames[0] = "../../Datasets/block/c_block";
-	filenames[1] = "../../Datasets/tube/tube";
-	filenames[2] = "../../Datasets/hurricane/hurricane_p_tc";
+	filenames[0] = "../Datasets/block/c_block";
+	filenames[1] = "../Datasets/tube/tube";
+	filenames[2] = "../Datasets/hurricane/hurricane_p_tc";
 
 	LoadData(filenames[0]);
 	loaded_file = 0;

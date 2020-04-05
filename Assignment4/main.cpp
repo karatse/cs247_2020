@@ -15,6 +15,9 @@
 #define BUFFER_WIDTH 1024
 #define BUFFER_HEIGHT 1024
 
+unsigned min_iso = -1;
+unsigned max_iso;
+
 int printOglError(char* file, int line)
 {
 	//
@@ -116,6 +119,19 @@ void display(void)
 	// TODO: perform raycasting steps here
 	// i.e. render frontfaces and backfaces, then cast
 	// =============================================================
+	float max_dim = vol_dim[0];
+	if (vol_dim[1] > max_dim) {
+		max_dim = vol_dim[1];
+	}
+	if (vol_dim[2] > max_dim) {
+		max_dim = vol_dim[2];
+	}
+	float x = vol_dim[0] / max_dim;
+	float y = vol_dim[1] / max_dim;
+	float z = vol_dim[2] / max_dim;
+	x = y = z = 1;
+	RenderBackFaces(x, y, z);
+	RenderFrontFaces(x, y, z);
 
 	RenderRaycastPass();
 
@@ -140,10 +156,16 @@ void key(unsigned char keyPressed, int x, int y) // key handling
 {
 	switch (keyPressed) {
 	case '1':
-		LoadData("../../Datasets/lobster.dat");
+		LoadData("../Datasets/lobster.dat");
 		break;
 	case '2':
-		LoadData("../../Datasets/skewed_head.dat");
+		LoadData("../Datasets/skewed_head.dat");
+		break;
+	case '3':
+		LoadData("../Datasets/dataset1.dat");
+		break;
+	case '4':
+		LoadData("../Datasets/dataset2.dat");
 		break;
 	case 'o':
 		enable_lighting = 1 - enable_lighting;
@@ -161,26 +183,30 @@ void key(unsigned char keyPressed, int x, int y) // key handling
 		else fprintf(stderr, "Iso Value Rendering\n");
 		break;
 	case 'i':
-		if (iso_value < 1.0f) {
-			iso_value += 0.05f;
+		iso_value += 0.05f;
+		if (iso_value > 1.0f) {
+			iso_value = 1.0f;
 		}
 		fprintf(stderr, "increasing iso value to: %f\n", iso_value);
 		break;
 	case 'k':
-		if (iso_value > 0.0f) {
-			iso_value -= 0.05f;
+		iso_value -= 0.05f;
+		if (iso_value < 0.0f) {
+			iso_value = 0.0f;
 		}
 		fprintf(stderr, "decreasing iso value to: %f\n", iso_value);
 		break;
 	case 'a':
-		if (ambient < 1.0f) {
-			ambient += 0.05f;
+		ambient += 0.05f;
+		if (ambient > 1.0f) {
+			ambient = 1.0f;
 		}
 		fprintf(stderr, "increasing ambient brightness value to: %f\n", ambient);
 		break;
 	case 'z':
-		if (ambient > 0.0f) {
-			ambient -= 0.05f;
+		ambient -= 0.05f;
+		if (ambient < 0.0f) {
+			ambient = 0.0f;
 		}
 		fprintf(stderr, "decreasing ambient brightness value to: %f\n", ambient);
 		break;
@@ -453,24 +479,23 @@ void LoadData(char* filename)
 		delete[] data_array;
 	}
 
+	size_t size = (size_t)vol_dim[0] * vol_dim[1] * vol_dim[2];
 	// 1D array for storing volume data
-	data_array = new unsigned short[vol_dim[0] * vol_dim[1] * vol_dim[2]];
-
+	data_array = new unsigned short[size];
 	// read volume data
-	fread(data_array, sizeof(unsigned short), (vol_dim[0] * vol_dim[1] * vol_dim[2]), fp);
-
-	// shift volume data by 4 bit (converting 12 bit data to 16 bit data)
-	for (int z = 0; z < vol_dim[2]; z++) {
-		for (int y = 0; y < vol_dim[1]; y++) {
-			for (int x = 0; x < vol_dim[0]; x++) {
-				int current_idx = x + (y * vol_dim[0]) + (z * vol_dim[0] * vol_dim[1]);
-				data_array[current_idx] = data_array[current_idx] << 4;
-			}
-		}
-	}
-
+	fread(data_array, sizeof(unsigned short), size, fp);
 	// close file
 	fclose(fp);
+	// shift volume data by 4 bit (converting 12 bit data to 16 bit data)
+	for (int i = 0; i < size; i++) {
+		data_array[i] <<= 4;
+		if (max_iso < data_array[i]) {
+			max_iso = data_array[i];
+		}
+		if (data_array[i] != 0 && min_iso > data_array[i]) {
+			min_iso = data_array[i];
+		}
+	}
 
 	// download data into texture
 	DownloadVolumeAsTexture();
@@ -515,6 +540,25 @@ void UpdateTransferfunction(void)
 	// =============================================================
 	// TODO: update custom transferfunction tf0 here
 	// =============================================================
+	float size = tf_win_max - tf_win_min + 1;
+	for (int i = 0; i < 128; i++)
+	{
+		float val;
+		if (i < tf_win_min) {
+			val = 0;
+		}
+		else if (i >= tf_win_max) {
+			val = 1;
+		}
+		else {
+			val = i / size;
+		}
+
+		tf0[4 * i + 0] = val;
+		tf0[4 * i + 1] = val;
+		tf0[4 * i + 2] = val;
+		tf0[4 * i + 3] = val;
+	}
 
 	DownloadTransferFunctionTexture(0);
 }
@@ -566,11 +610,45 @@ void DownloadTransferFunctionTexture(int tf_id)
 	glDisable(GL_TEXTURE_1D);
 }
 
+void drawQuads(float dim_x, float dim_y, float dim_z)
+{
+	float points[][3] = {
+		{dim_x, dim_y, dim_z},
+		{dim_x, dim_y, -dim_z},
+		{dim_x, -dim_y, -dim_z},
+		{dim_x, -dim_y, dim_z},
+		{-dim_x, dim_y, dim_z},
+		{-dim_x, dim_y, -dim_z},
+		{-dim_x, -dim_y, -dim_z},
+		{-dim_x, -dim_y, dim_z}
+	};
+	int quads[][4] = {
+		{3, 2, 1, 0},
+		{6, 7, 4, 5},
+		{2, 6, 5, 1},
+		{7, 3, 0, 4},
+		{4, 0, 1, 5},
+		{6, 2, 3, 7}
+	};
+
+	glBegin(GL_QUADS);
+	for (size_t i = 0; i < 6; i++)
+	{
+		for (size_t j = 0; j < 4; j++)
+		{
+			float* v = points[quads[i][j]];
+			glColor3fv(v);
+			glMultiTexCoord3fv(GL_TEXTURE1, v);
+			glVertex3fv(v);
+		}
+	}
+	glEnd();
+}
 
 /*
  * render backfaces to start raycasting
  */
-void RenderBackFaces( /* params */)
+void RenderBackFaces(float dim_x, float dim_y, float dim_z)
 {
 	enableRenderToBuffer(backface_buffer);
 
@@ -578,6 +656,11 @@ void RenderBackFaces( /* params */)
 	// TODO: render your backfaces here
 	// result gets piped to backface_buffer automatically
 	// =============================================================
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_FRONT);
+	drawQuads(dim_x, dim_y, dim_z);
+	glDisable(GL_CULL_FACE);
 
 	disableRenderToBuffer();
 }
@@ -594,6 +677,11 @@ void RenderFrontFaces(float dim_x, float dim_y, float dim_z)
 	// TODO: render your backfaces here
 	// result gets piped to frontface_buffer automatically
 	// =============================================================
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+	drawQuads(dim_x, dim_y, dim_z);
+	glDisable(GL_CULL_FACE);
 
 	disableRenderToBuffer();
 }
@@ -617,13 +705,36 @@ void RenderRaycastPass(void)
 	glUniform1i(tf_location, 0);
 
 	// example for a scalar/vector uniform
-	int params_location = glGetUniformLocation(shader_program, "params");
-	glUniform4f(params_location, 0.0, 0.5, 1.0, 1.0);
+	int enable_lighting_loc = glGetUniformLocation(shader_program, "enable_lighting");
+	glUniform1i(enable_lighting_loc, enable_lighting);
 
 	// =============================================================
 	// TODO: add additional uniforms as needed
 	// i.e. front and backface buffers ( frontface_buffer, backface_buffer )
 	// =============================================================
+	int size_step_loc = glGetUniformLocation(shader_program, "step_size");
+	glUniform1f(size_step_loc, step_size);
+
+	int brightness_loc = glGetUniformLocation(shader_program, "brightness");
+	glUniform1f(brightness_loc, ambient);
+
+	int isoval_loc = glGetUniformLocation(shader_program, "iso_value");
+	glUniform1f(isoval_loc, iso_value);
+
+	int vol_texture_loc = glGetUniformLocation(shader_program, "vol_texture");
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_3D, vol_texture);
+	glUniform1i(vol_texture_loc, 1);
+
+	int front_texture_loc = glGetUniformLocation(shader_program, "front_texture");
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, frontface_buffer);
+	glUniform1i(front_texture_loc, 2);
+
+	int back_texture_loc = glGetUniformLocation(shader_program, "back_texture");
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, backface_buffer);
+	glUniform1i(back_texture_loc, 3);
 
 	// Render screen filling quad
 	// use squared centered quad to not disturb ratio
@@ -705,7 +816,7 @@ void RenderBufferToScreen(GLuint buffer) {
 	else {
 
 		dim = view_height;
-		off = (view_width - view_height);
+		off = (view_width - view_height) / 2;
 
 		x[0] = off;
 		x[1] = dim + off;
