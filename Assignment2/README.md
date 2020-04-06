@@ -8,6 +8,7 @@
 - Global normals stores normal values of the vertices
 
 ## Marching Squares
+
 ![alt text](images/squares.png)
 
 There are 7 cases that need lines drawn due to symmetry. Only case 5 (and 10) need 2 lines to be drawn.
@@ -33,9 +34,11 @@ The values are normalized between \[-1, 1].
 Table offset provides a simple way to access the neighbors of a point in an iterative way.
 For each point, collect neighboring points coordinates p and values val. 
 Using these values, determine cube case cubeIndex
+
 ![alt text](images/cubeIndex.png)
 
 For each edge of the cubes, determine if a line should be drawn and calculate its points.
+
 ![alt text](images/vertices.png)
 
 Table points is used to easily find the edges of each case.
@@ -51,6 +54,7 @@ Each computing node can calculate the internal points of the subspace, only the 
 perimeters need interprocess communication.
 
 ![alt text](images/parallelize.png)
+
 In this example, the process with the green subspace would have to send the edge values of the green cube
 to the red, yellow, and blue processes. It would also receive the edge values of the adjacent cubes.
 While waiting for communication, the internal values of the cube can run the marching cube algorithm as implemented.
