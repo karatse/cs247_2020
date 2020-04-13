@@ -43,7 +43,7 @@ void main()
 		vec4 value = texture3D(vol_texture, position);
 		// Opacity correction
 		float opacity = 1 - pow(1 - value.a, step_size / base_step_size);
-		if (opacity >= iso_value && !hit)
+		if (opacity >= iso_value)
 		{
 			hit = true;
 			pos = position;
