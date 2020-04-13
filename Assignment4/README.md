@@ -48,8 +48,20 @@ void main() {
 }
 ```
 
+## Interactive windowing transfer function
+Windowing transfer function is calculated as shown in the following image:
+
+![alt text](images/tf0.png "tf0 window function")
+
+The initial `min_win` is `0` and  `max_win` is `1` so it is a straight line. The user can modify these values and
+watch live updates taking place.
+
+## Iso-surface rendering
+This method is similar to dvr, but with a breaking condition on first hit of the iso value.
+
 ![alt text](images/shading_central_differences.png "central differences shading")
 ![alt text](images/without_shading.png "without central differences")
 ![alt text](images/loop512.png "512 iterations")
 ![alt text](images/loop256.png "256 iterations")
 ![alt text](images/light_disabled.png "disabled light")
+![alt text](images/iso.png "iso raycasting")

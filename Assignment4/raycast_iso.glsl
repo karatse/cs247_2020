@@ -24,7 +24,7 @@ PointLight L = PointLight(vec3(0.9f, 0.5f, 0.3f), vec3(0.4f, 0.2f, 0.1f), vec3(0
 
 void main()
 {
-	// Direct Volume Rendering
+	// Iso Surface Raycasting
 	// Initialize accumulated color and opacity
 	vec4 dst = vec4(0.0);
 	// Determine volume entry position
@@ -34,29 +34,27 @@ void main()
 	// Normalized ray direction
 	direction = normalize(direction);
 	vec3 pos = position;
-	bool hit = false;
-
+	float opacity = 0;
 	// Loop for ray traversal
 	for (int i = 0; i < 512; i++)	// Some large number
 	{
 		// Data access to scalar value in 3D valume texture
 		vec4 value = texture3D(vol_texture, position);
 		// Opacity correction
-		float opacity = 1 - pow(1 - value.a, step_size / base_step_size);
+		opacity = 1 - pow(1 - value.a, step_size / base_step_size);
 		if (opacity >= iso_value)
 		{
-			hit = true;
 			pos = position;
+			// Early ray Termination
+			break;
 		}
-		// Apply transfer function
-		vec4 src = texture1D(transferfunction, opacity);
-		// Front-to-back compositing
-		dst += (1.0-dst.a) * src;
-		// Early ray Termination
-		if (dst.a > termination_threshold || hit) break;
 		// Advance ray position along ray direction
 		position += direction * step_size;
 	}
+	// Apply transfer function
+	vec4 src = texture1D(transferfunction, opacity);
+	// Front-to-back compositing
+	dst += (1.0-dst.a) * src;
 
 	vec4 light = vec4(1.0, 1.0, 1.0, 1.0);
 	if (enable_lighting) {
