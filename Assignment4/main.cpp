@@ -126,12 +126,8 @@ void display(void)
 	if (vol_dim[2] > max_dim) {
 		max_dim = vol_dim[2];
 	}
-	float x = vol_dim[0] / max_dim;
-	float y = vol_dim[1] / max_dim;
-	float z = vol_dim[2] / max_dim;
-	x = y = z = 1;
-	RenderBackFaces(x, y, z);
-	RenderFrontFaces(x, y, z);
+	RenderBackFaces(1, 1, 1);
+	RenderFrontFaces(1, 1, 1);
 
 	RenderRaycastPass();
 
@@ -469,9 +465,7 @@ void LoadData(char* filename)
 	memset(vol_dim, 0, sizeof(unsigned short) * 3);
 
 	//read volume dimensions from file
-	fread(&vol_dim[0], sizeof(unsigned short), 1, fp);
-	fread(&vol_dim[1], sizeof(unsigned short), 1, fp);
-	fread(&vol_dim[2], sizeof(unsigned short), 1, fp);
+	fread(vol_dim, sizeof(unsigned short), 3, fp);
 
 	fprintf(stderr, "volume dimensions: x: %i, y: %i, z:%i \n", vol_dim[0], vol_dim[1], vol_dim[2]);
 
@@ -481,22 +475,48 @@ void LoadData(char* filename)
 
 	size_t size = (size_t)vol_dim[0] * vol_dim[1] * vol_dim[2];
 	// 1D array for storing volume data
-	data_array = new unsigned short[size];
+	unsigned short* temp = new unsigned short[size];
 	// read volume data
-	fread(data_array, sizeof(unsigned short), size, fp);
+	fread(temp, sizeof(unsigned short), size, fp);
 	// close file
 	fclose(fp);
 	// shift volume data by 4 bit (converting 12 bit data to 16 bit data)
 	for (int i = 0; i < size; i++) {
-		data_array[i] <<= 4;
-		if (max_iso < data_array[i]) {
-			max_iso = data_array[i];
+		temp[i] <<= 4;
+		if (max_iso < temp[i]) {
+			max_iso = temp[i];
 		}
-		if (data_array[i] != 0 && min_iso > data_array[i]) {
-			min_iso = data_array[i];
+		if (temp[i] != 0 && min_iso > temp[i]) {
+			min_iso = temp[i];
 		}
 	}
 
+	float max_dim = vol_dim[0];
+	if (vol_dim[1] > max_dim) {
+		max_dim = vol_dim[1];
+	}
+	if (vol_dim[2] > max_dim) {
+		max_dim = vol_dim[2];
+	}
+	size = (size_t)max_dim * max_dim * max_dim;
+	data_array = new unsigned short[size];
+	memset(data_array, 0, sizeof(unsigned short) * size);
+    int x_center = (max_dim - vol_dim[0]) / 2;
+    int y_center = (max_dim - vol_dim[1]) / 2;
+    int z_center = (max_dim - vol_dim[2]) / 2;
+	for (int z = 0; z < vol_dim[2]; z++) {
+		for (int y = 0; y < vol_dim[1]; y++) {
+			for (int x = 0; x < vol_dim[0]; x++) {
+				int current_idx = x + (y * vol_dim[0]) + (z * vol_dim[0] * vol_dim[1]);
+				int new_idx = (x + x_center) + ((y + y_center) * max_dim) + ((z + z_center) * max_dim * max_dim);
+				data_array[new_idx] = temp[current_idx];
+			}
+		}
+	}
+
+	vol_dim[0] = max_dim;
+	vol_dim[1] = max_dim;
+	vol_dim[2] = max_dim;
 	// download data into texture
 	DownloadVolumeAsTexture();
 
@@ -638,7 +658,7 @@ void drawQuads(float dim_x, float dim_y, float dim_z)
 		{
 			float* v = points[quads[i][j]];
 			glColor3fv(v);
-			glMultiTexCoord3fv(GL_TEXTURE1, v);
+			glMultiTexCoord3fv(GL_TEXTURE0, v);
 			glVertex3fv(v);
 		}
 	}

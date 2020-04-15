@@ -65,3 +65,10 @@ This method is similar to dvr, but with a breaking condition on first hit of the
 ![alt text](images/loop256.png "256 iterations")
 ![alt text](images/light_disabled.png "disabled light")
 ![alt text](images/iso.png "iso raycasting")
+
+## FIXED
+- Moved shading inside dvr loop
+- Aspect ratio fixed
+
+![alt text](images/aspect_ratio_fix.png "aspect ratio fix")
+
