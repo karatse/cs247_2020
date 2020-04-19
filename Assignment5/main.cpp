@@ -13,6 +13,7 @@
 void drawGlyphs();
 int sampling_rate = 20;
 bool draw_glyphs = false;
+bool dynamic_glyphs = false;
 
 int printOglError(char* file, int line)
 {
@@ -161,6 +162,10 @@ void key(unsigned char keyPressed, int x, int y) // key handling
         draw_glyphs = !draw_glyphs;
         fprintf(stderr, "Draw glyphs %s.\n", status[draw_glyphs]);
         break;
+	case 'd':
+		dynamic_glyphs = !dynamic_glyphs;
+		fprintf(stderr, "Dynamic glyphs %s.\n", status[dynamic_glyphs]);
+		break;
 	case '0':
 		if (num_timesteps > 1) {
 			loadNextTimestep();
@@ -272,8 +277,8 @@ void special(int key, int x, int y)
 void drawGlyphs() {
     int data_size = vol_dim[0] * vol_dim[1] * vol_dim[2];
 
-    for (int j = 0; j < vol_dim[1]; j += sampling_rate) {
-        for (int i = 0; i < vol_dim[0]; i += sampling_rate) {
+    for (int i = 0; i < vol_dim[0]; i += sampling_rate) {
+        for (int j = 0; j < vol_dim[1]; j += sampling_rate) {
 			float x0 = i / (float)vol_dim[0];
 			float y0 = j / (float)vol_dim[1];
 
@@ -281,17 +286,18 @@ void drawGlyphs() {
 			float vx = vector_array[3 * index + 0 + 3 * loaded_timestep * data_size];
             float vy = vector_array[3 * index + 1 + 3 * loaded_timestep * data_size];
 
-			float scale = 1;
-			float x1 = (i + scale * vx) / (float) vol_dim[0];
-            float y1 = (j + scale * vy) / (float) vol_dim[1];
+			float x1 = (i + vx) / (float) vol_dim[0];
+            float y1 = (j + vy) / (float) vol_dim[1];
+			float s = (x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0);
 
-            if ((x0 - x1) * (x0 - x1) + (y0 - y1) * (y0 - y1) < 0.000001) continue;
+            if (s < 0.000001f) continue;
 
 			glColor3f(1.0, 1.0, 0.0);
             glPushMatrix();
             glTranslatef(x0, y0, 0);
-            glRotatef(atan2(y1-y0, x1-x0) * 180 / M_PI, 0, 0, 1);
-            glScalef(0.03, 0.03, 1);
+            glRotatef(atan2(vy, vx) * 180 / M_PI, 0, 0, 1);
+            s = dynamic_glyphs ? sqrt(s) : 0.03;
+            glScalef(s, s, 1);
             glBegin(GL_TRIANGLES);
             glVertex2f(0, 0.75);
             glVertex2f(1, 0.5);
@@ -401,7 +407,7 @@ void LoadVectorData(const char* filename)
 {
 	fprintf(stderr, "loading scalar file %s\n", filename);
 
-	// open data file, read only, binary mode 
+	// open data file, read only, binary mode
 	char ts_name[80];
 	if (num_timesteps > 1)
 	{
@@ -482,7 +488,7 @@ void LoadVectorData(const char* filename)
 					}
 				}
 				else {
-					// overwrite 
+					// overwrite
 					if (i == 0) {
 						vector_array[3 * j + 0 + 3 * k * data_size] = tmp[j * num_total_fields + 0 + k * data_size * num_total_fields];
 						vector_array[3 * j + 1 + 3 * k * data_size] = tmp[j * num_total_fields + 1 + k * data_size * num_total_fields];
@@ -612,7 +618,7 @@ void initGL(void) {
 	getGlVersion(&gl_major, &gl_minor);
 	printf("GL_VERSION major=%d minor=%d\n", gl_major, gl_minor);
 
-	// initialize all the OpenGL extensions 
+	// initialize all the OpenGL extensions
 	if (glewGetExtension("GL_EXT_framebuffer_object"))
 		printf("GL_EXT_framebuffer_object support\n");
 
