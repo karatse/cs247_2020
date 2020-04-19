@@ -4,10 +4,15 @@
 //
 
 #include <cstdio>
+#define _USE_MATH_DEFINES
 #include <cmath>
 #include <string>
 
 #include "main.h"
+
+void drawGlyphs();
+int sampling_rate = 20;
+bool draw_glyphs = false;
 
 int printOglError(char* file, int line)
 {
@@ -108,6 +113,9 @@ void display(void)
 
 
 	glDisable(GL_TEXTURE_2D);
+    if (draw_glyphs) {
+        drawGlyphs();
+    }
 	glFlush();
 	glutSwapBuffers();
 
@@ -126,6 +134,10 @@ void play(void)
 static
 void key(unsigned char keyPressed, int x, int y) // key handling
 {
+	const char* status[2];
+	status[0] = "disabled";
+	status[1] = "enabled";
+
 	switch (keyPressed) {
 	case '1':
 		toggle_xy = 0;
@@ -145,6 +157,10 @@ void key(unsigned char keyPressed, int x, int y) // key handling
 		loaded_file = 2;
 		fprintf(stderr, "Loading %s dataset.\n", filenames[2]);
 		break;
+    case '4':
+        draw_glyphs = !draw_glyphs;
+        fprintf(stderr, "Draw glyphs %s.\n", status[draw_glyphs]);
+        break;
 	case '0':
 		if (num_timesteps > 1) {
 			loadNextTimestep();
@@ -165,13 +181,25 @@ void key(unsigned char keyPressed, int x, int y) // key handling
 	case 27:
 		exit(0);
 		break;
+	case '+':
+		sampling_rate++;
+		fprintf(stderr, "Increase sample rate to %d.\n", sampling_rate);
+		break;
+	case '-':
+		if (sampling_rate > 1)
+		    sampling_rate--;
+		fprintf(stderr, "Decrease sample rate to %d.\n", sampling_rate);
+		break;
 	default:
 		fprintf(stderr, "\nKeyboard commands:\n\n"
 			"1, load %s dataset\n"
 			"2, load %s dataset\n"
 			"3, load %s dataset\n"
+            "4, enable/disable draw glyphs\n"
 			"0, cycle through timesteps\n"
-			"b, switch backgropund color\n"
+			"-, decrease sample rate\n"
+            "+, increase sample rate\n"
+			"b, switch background color\n"
 			"q, <esc> - Quit\n",
 			filenames[0], filenames[1], filenames[2]);
 		break;
@@ -239,6 +267,39 @@ void special(int key, int x, int y)
 	default:
 		break;
 	}
+}
+
+void drawGlyphs() {
+    int data_size = vol_dim[0] * vol_dim[1] * vol_dim[2];
+
+    for (int j = 0; j < vol_dim[1]; j += sampling_rate) {
+        for (int i = 0; i < vol_dim[0]; i += sampling_rate) {
+			float x0 = i / (float)vol_dim[0];
+			float y0 = j / (float)vol_dim[1];
+
+			int index = j * vol_dim[0] + i;
+			float vx = vector_array[3 * index + 0 + 3 * loaded_timestep * data_size];
+            float vy = vector_array[3 * index + 1 + 3 * loaded_timestep * data_size];
+
+			float scale = 1;
+			float x1 = (i + scale * vx) / (float) vol_dim[0];
+            float y1 = (j + scale * vy) / (float) vol_dim[1];
+
+            if ((x0 - x1) * (x0 - x1) + (y0 - y1) * (y0 - y1) < 0.000001) continue;
+
+			glColor3f(1.0, 1.0, 0.0);
+            glPushMatrix();
+            glTranslatef(x0, y0, 0);
+            glRotatef(atan2(y1-y0, x1-x0) * 180 / M_PI, 0, 0, 1);
+            glScalef(0.03, 0.03, 1);
+            glBegin(GL_TRIANGLES);
+            glVertex2f(0, 0.75);
+            glVertex2f(1, 0.5);
+            glVertex2f(0, 0.25);
+            glEnd();
+            glPopMatrix();
+        }
+    }
 }
 
 void computeStreamline( /* start point */)
