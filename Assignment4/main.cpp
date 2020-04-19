@@ -44,7 +44,7 @@ int printOglError(char* file, int line)
 void getGlVersion(int* major, int* minor)
 {
 	const char* verstr = (const char*)glGetString(GL_VERSION);
-	if ((verstr == NULL) || (sscanf_s(verstr, "%d.%d", major, minor) != 2)) {
+	if ((verstr == NULL) || (sscanf(verstr, "%d.%d", major, minor) != 2)) {
 		*major = *minor = 0;
 		fprintf(stderr, "Invalid GL_VERSION format!!!\n");
 	}
@@ -451,12 +451,11 @@ void special(int key, int x, int y)
 /*
  * load .dat dataset
  */
-void LoadData(char* filename)
+void LoadData(const char* filename)
 {
 	fprintf(stderr, "loading data %s\n", filename);
 
-	FILE* fp;
-	fopen_s(&fp, filename, "rb"); // open file, read only, binary mode 
+	FILE* fp = fopen(filename, "rb"); // open file, read only, binary mode
 	if (fp == NULL) {
 		fprintf(stderr, "Cannot open file %s for reading.\n", filename);
 		return;
@@ -907,7 +906,7 @@ void initGL(void) {
 		glewGetExtension("GL_ARB_shader_objects") != GL_TRUE ||
 		glewGetExtension("GL_ARB_shading_language_100") != GL_TRUE) {
 
-		printf("Driver does not support OpenGL Shading Language");
+		printf("Driver does not support OpenGL Shading Language\n");
 		exit(1);
 	}
 
@@ -945,7 +944,7 @@ void initGL(void) {
 	DownloadTransferFunctionTexture(0);
 }
 
-char* textFileRead(char* fn) {
+char* textFileRead(const char* fn) {
 
 	FILE* fp;
 	char* content = NULL;
@@ -953,7 +952,7 @@ char* textFileRead(char* fn) {
 	int count = 0;
 
 	if (fn != NULL) {
-		fopen_s(&fp, fn, "rt");
+		fp = fopen(fn, "rt");
 
 		if (fp != NULL) {
 			fseek(fp, 0, SEEK_END);

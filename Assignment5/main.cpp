@@ -126,34 +126,24 @@ void play(void)
 static
 void key(unsigned char keyPressed, int x, int y) // key handling
 {
-	char* status[2];
-	status[0] = "disabled";
-	status[1] = "enabled";
-
 	switch (keyPressed) {
 	case '1':
 		toggle_xy = 0;
 		LoadData(filenames[0]);
 		loaded_file = 0;
-		fprintf(stderr, "Loading ");
-		fprintf(stderr, filenames[0]);
-		fprintf(stderr, " dataset.\n");
+		fprintf(stderr, "Loading %s dataset.\n", filenames[0]);
 		break;
 	case '2':
 		toggle_xy = 0;
 		LoadData(filenames[1]);
 		loaded_file = 1;
-		fprintf(stderr, "Loading ");
-		fprintf(stderr, filenames[1]);
-		fprintf(stderr, " dataset.\n");
+		fprintf(stderr, "Loading %s dataset.\n", filenames[1]);
 		break;
 	case '3':
 		toggle_xy = 1;
 		LoadData(filenames[2]);
 		loaded_file = 2;
-		fprintf(stderr, "Loading ");
-		fprintf(stderr, filenames[2]);
-		fprintf(stderr, " dataset.\n");
+		fprintf(stderr, "Loading %s dataset.\n", filenames[2]);
 		break;
 	case '0':
 		if (num_timesteps > 1) {
@@ -278,7 +268,7 @@ void loadNextTimestep(void)
  * This only reads the header information and calls the dat loader
  * For now we ignore the grid data and assume a rectangular grid
  */
-void LoadData(char* base_filename)
+void LoadData(const char* base_filename)
 {
 	//reset
 	reset_rendering_props();
@@ -297,9 +287,7 @@ void LoadData(char* base_filename)
 	}
 
 	// read header
-	char header[40];
-	fread(header, sizeof(char), 40, fp);
-	sscanf(header, "SN4DB %d %d %d %d %d %f",
+	fscanf(fp, "SN4DB %hu %hu %hu %d %d %f",
 		&vol_dim[0], &vol_dim[1], &vol_dim[2],
 		&num_scalar_fields, &num_timesteps, &timestep);
 

@@ -9,7 +9,7 @@
 // ==========================================================================
 // Declarations
 int printOglError(char* file, int line);
-void LoadData(char* filename);
+void LoadData(const char* filename);
 void DownloadVolumeAsTexture();
 
 unsigned short* data_array;
@@ -52,7 +52,7 @@ int printOglError(char* file, int line)
 void getGlVersion(int* major, int* minor)
 {
 	const char* verstr = (const char*)glGetString(GL_VERSION);
-	if ((verstr == NULL) || (sscanf_s(verstr, "%d.%d", major, minor) != 2)) {
+	if ((verstr == NULL) || (sscanf(verstr, "%d.%d", major, minor) != 2)) {
 		*major = *minor = 0;
 		fprintf(stderr, "Invalid GL_VERSION format!!!\n");
 	}
@@ -245,12 +245,11 @@ static void special(int key, int x, int y)
 
 // ==========================================================================
 // Data
-void LoadData(char* filename)
+void LoadData(const char* filename)
 {
 	fprintf(stderr, "loading data %s\n", filename);
 
-	FILE* fp;
-	fopen_s(&fp, filename, "rb"); // open file, read only, binary mode 
+	FILE* fp = fopen(filename, "rb"); // open file, read only, binary mode 
 	if (fp == NULL) {
 		fprintf(stderr, "Cannot open file %s for reading.\n", filename);
 		return;

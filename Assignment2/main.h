@@ -22,7 +22,7 @@ struct Vertex {
 // ==========================================================================
 // Function Declarations
 int printOglError(char* file, int line);
-void LoadData(char* filename);
+void LoadData(const char* filename);
 void DownloadVolumeAsTexture();
 
 void MarchingSquares();

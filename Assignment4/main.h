@@ -114,10 +114,8 @@ int printOglError(char* file, int line);
 
 #define printOpenGLError() printOglError((char *)__FILE__, __LINE__)
 
-void reshape(int wid, int ht);
-
-void LoadData(char* filename);
-void LoadDataByte(char* filename);
+void LoadData(const char* filename);
+void LoadDataByte(const char* filename);
 void CreateTestData(void);
 
 void DownloadVolumeAsTexture(void);
@@ -137,7 +135,7 @@ void disableRenderToBuffer(void);
 
 void initGL(void);
 
-char* textFileRead(char* fn);
+char* textFileRead(const char* fn);
 void LoadAndLinkShaders(void);
 
 #endif // __CS247_ASSIGNMENT2_h__

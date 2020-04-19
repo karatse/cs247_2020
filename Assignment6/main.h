@@ -3,7 +3,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-//#include <string.h>
+#include <string.h>
 #include <fcntl.h>
 
 #include <algorithm>
@@ -62,7 +62,7 @@ char bmModifiers;	// keyboard modifiers (e.g. ctrl,...)
 float clear_color[4]; // clearcolor for shader
 
 // data handling
-char* filenames[3];
+const char* filenames[3];
 bool grid_data_loaded;
 bool scalar_data_loaded;
 unsigned short vol_dim[3];
@@ -107,11 +107,9 @@ int printOglError(char* file, int line);
 
 #define printOpenGLError() printOglError((char *)__FILE__, __LINE__)
 
-void reshape(int wid, int ht);
-
 void NextTimestep(void);
 
-void LoadData(char* base_filename);
+void LoadData(const char* base_filename);
 void LoadVectorData(const char* filename);
 void CreateNoiseField(void);
 
