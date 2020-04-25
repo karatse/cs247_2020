@@ -9,11 +9,23 @@
 #include <string>
 
 #include "main.h"
+#define EULER	0
+#define RK2		1
+#define RK4		2
 
-void drawGlyphs();
 int sampling_rate = 20;
 bool draw_glyphs = false;
 bool dynamic_glyphs = false;
+bool draw_streamline = false;
+bool draw_pathline = false;
+int data_size;
+std::vector<int> seed_point;
+std::vector<int> streamline_point;
+std::vector<int> pathline_point;
+int integration = EULER;
+float dt = 0.02;
+float threshold = 0.001;
+int max_iter = 80000;
 
 int printOglError(char* file, int line)
 {
@@ -117,6 +129,32 @@ void display(void)
     if (draw_glyphs) {
         drawGlyphs();
     }
+    if (draw_streamline) {
+		for (int i = streamline_point.size() / 2; i < seed_point.size(); i += 2) {
+			computeStreamline(seed_point[i], seed_point[i+1]);
+		}
+        glLineWidth(2);
+        glBegin(GL_LINES);
+        glColor3f(0.0, 1.0, 0.0);
+        for (int i = 0; i < streamline_point.size(); i += 4) {
+            glVertex2f(streamline_point[i+0] / (float)vol_dim[0], streamline_point[i+1] / (float)vol_dim[1]);
+            glVertex2f(streamline_point[i+2] / (float)vol_dim[0], streamline_point[i+3] / (float)vol_dim[1]);
+        }
+        glEnd();
+    }
+    if (draw_pathline) {
+		for (int i = pathline_point.size() / 2; i < seed_point.size(); i += 2) {
+			computePathline(seed_point[i], seed_point[i + 1]);
+		}
+        glLineWidth(2);
+        glBegin(GL_LINES);
+        glColor3f(1.0, 0.0, 0.0);
+        for (int i = 0; i < pathline_point.size(); i += 4) {
+            glVertex2f(pathline_point[i+0] / (float)vol_dim[0], pathline_point[i+1] / (float)vol_dim[1]);
+            glVertex2f(pathline_point[i+2] / (float)vol_dim[0], pathline_point[i+3] / (float)vol_dim[1]);
+        }
+        glEnd();
+    }
 	glFlush();
 	glutSwapBuffers();
 
@@ -162,12 +200,64 @@ void key(unsigned char keyPressed, int x, int y) // key handling
         draw_glyphs = !draw_glyphs;
         fprintf(stderr, "Draw glyphs %s.\n", status[draw_glyphs]);
         break;
+    case '5':
+        draw_streamline = !draw_streamline;
+        fprintf(stderr, "%s streamline status\n", status[draw_streamline]);
+        break;
+    case '6':
+		draw_pathline = !draw_pathline;
+        fprintf(stderr, "%s pathline status\n", status[draw_pathline]);
+        break;
+	case 'j':
+		integration = EULER;
+        streamline_point.clear();
+        pathline_point.clear();
+		fprintf(stderr, "Switch to Euler\n");
+		break;
+	case 'k':
+		integration = RK2;
+        streamline_point.clear();
+        pathline_point.clear();
+		fprintf(stderr, "Switch to RK2\n");
+		break;
+	case 'l':
+		integration = RK4;
+        streamline_point.clear();
+        pathline_point.clear();
+		fprintf(stderr, "Switch to RK4\n");
+		break;
+    case 'i':
+        dt += 0.005;
+        fprintf(stderr, "Increase dt to %f.\n", dt);
+        break;
+    case 'o':
+        dt -= 0.005;
+        fprintf(stderr, "Decrease dt to %f.\n", dt);
+        break;
+    case 'h':
+		for (int i = 0; i < vol_dim[0]; i += sampling_rate)
+		{
+			seed_point.push_back(i);
+			seed_point.push_back(vol_dim[1] / 2);
+		}
+        fprintf(stderr, "Release multiple streamline seeds in horizontal rake\n");
+        break;
+    case 'v':
+		for (int j = 0; j < vol_dim[1]; j += sampling_rate)
+		{
+			seed_point.push_back(vol_dim[0] / 2);
+			seed_point.push_back(j);
+		}
+        fprintf(stderr, "Release multiple streamline seeds in vertical rake\n");
+        break;
 	case 'd':
 		dynamic_glyphs = !dynamic_glyphs;
 		fprintf(stderr, "Dynamic glyphs %s.\n", status[dynamic_glyphs]);
 		break;
 	case '0':
 		if (num_timesteps > 1) {
+			streamline_point.clear();
+			pathline_point.clear();
 			loadNextTimestep();
 			fprintf(stderr, "Timestep %d.\n", loaded_timestep);
 		}
@@ -200,7 +290,16 @@ void key(unsigned char keyPressed, int x, int y) // key handling
 			"1, load %s dataset\n"
 			"2, load %s dataset\n"
 			"3, load %s dataset\n"
-            "4, enable/disable draw glyphs\n"
+            "4, toggle draw glyphs\n"
+            "5, toggle streamline status\n"
+			"6, toggle pathline status\n"
+			"j, switch to Euler integration\n"
+			"k, switch to RK2 integration\n"
+			"l, switch to RK4 integration\n"
+			"h, Release multiple streamline seeds in horizontal rake\n"
+			"v, Release multiple streamline seeds in vertical rake\n"
+            "i, increase dt\n"
+            "o, decrease dt\n"
 			"0, cycle through timesteps\n"
 			"-, decrease sample rate\n"
             "+, increase sample rate\n"
@@ -229,6 +328,8 @@ void mouse(int button, int state, int x, int y)
 
 		// TODO:
 		// seed streamlines & pathlines using mouseclicks
+		seed_point.push_back(x);
+		seed_point.push_back(y);
 	}
 }
 
@@ -274,29 +375,32 @@ void special(int key, int x, int y)
 	}
 }
 
-void drawGlyphs() {
-    int data_size = vol_dim[0] * vol_dim[1] * vol_dim[2];
+float vector_value(size_t x, size_t y, int dim, int timestep)
+{
+	x %= vol_dim[0];
+	y %= vol_dim[1];
+	int index = y * vol_dim[0] + x;
+	return vector_array[3 * index + dim + 3 * timestep * data_size];
+}
 
+void drawGlyphs() {
     for (int i = 0; i < vol_dim[0]; i += sampling_rate) {
         for (int j = 0; j < vol_dim[1]; j += sampling_rate) {
 			float x0 = i / (float)vol_dim[0];
 			float y0 = j / (float)vol_dim[1];
 
-			int index = j * vol_dim[0] + i;
-			float vx = vector_array[3 * index + 0 + 3 * loaded_timestep * data_size];
-            float vy = vector_array[3 * index + 1 + 3 * loaded_timestep * data_size];
+			float vx = vector_value(i, j, 0, loaded_timestep);
+            float vy = vector_value(i, j, 1, loaded_timestep);
 
-			float x1 = (i + vx) / (float) vol_dim[0];
-            float y1 = (j + vy) / (float) vol_dim[1];
-			float s = (x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0);
+			float s = sqrt(vx * vx + vy * vy);
 
-            if (s < 0.000001f) continue;
+            if (s < threshold) continue;
 
 			glColor3f(1.0, 1.0, 0.0);
             glPushMatrix();
             glTranslatef(x0, y0, 0);
             glRotatef(atan2(vy, vx) * 180 / M_PI, 0, 0, 1);
-            s = dynamic_glyphs ? sqrt(s) : 0.03;
+            s = dynamic_glyphs ? 0.03 / (1 + exp(-0.03 * s)) : 0.03;
             glScalef(s, s, 1);
             glBegin(GL_TRIANGLES);
             glVertex2f(0, 0.75);
@@ -308,18 +412,244 @@ void drawGlyphs() {
     }
 }
 
-void computeStreamline( /* start point */)
+float bilinearInterpolation(float x, float y, int dim, float timestep) {
+    float xf = floor(x);
+    float xc = ceil(x);
+    float yf = floor(y);
+    float yc = ceil(y);
+
+    float v1 = vector_value(xf, yc, dim, timestep) * (xc - x) * (y - yf);
+    float v2 = vector_value(xc, yc, dim, timestep) * (x - xf) * (y - yf);
+    float v3 = vector_value(xf, yf, dim, timestep) * (xc - x) * (yc - y);
+    float v4 = vector_value(xc, yf, dim, timestep) * (x - xf) * (yc - y);
+    return v1 + v2 + v3 + v4;
+}
+
+void streamlineIntegration(int x, int y, bool backward=false) {
+	float x0 = x;
+	float y0 = y;
+	if (x0 < 0 || vol_dim[0] <= x0 || y0 < 0 || vol_dim[1] <= y0) return;
+
+	float vx = vector_value(x0, y0, 0, loaded_timestep);
+	float vy = vector_value(x0, y0, 1, loaded_timestep);
+	float s = sqrt(vx * vx + vy * vy);
+	if (s < threshold) return;
+	if (backward) {
+		vx = -vx;
+		vy = -vy;
+	}
+
+	// normalize
+	vx /= s;
+	vy /= s;
+
+	for (int i = 0; i < max_iter; i++) {
+        float x1, y1;
+        float ax, ay, bx, by, cx, cy, dx, dy;
+		switch (integration) {
+		case RK2:
+			// next postion
+			x1 = x0 + vx * dt / 2;
+			y1 = y0 + vy * dt / 2;
+			if (x1 < 0 || vol_dim[0] <= x1 || y1 < 0 || vol_dim[1] <= y1) return;
+
+			// bilinear interpolation
+			vx = bilinearInterpolation(x1, y1, 0, loaded_timestep);
+			vy = bilinearInterpolation(x1, y1, 1, loaded_timestep);
+			s = sqrt(vx * vx + vy * vy);
+			if (s < threshold) return;
+			if (backward) {
+				vx = -vx;
+				vy = -vy;
+			}
+
+			// normalize
+			vx /= s;
+			vy /= s;
+
+            // next postion
+            x1 = x0 + vx * dt;
+            y1 = y0 + vy * dt;
+            break;
+		case EULER:
+			// next postion
+			x1 = x0 + vx * dt;
+			y1 = y0 + vy * dt;
+			break;
+		case RK4:
+		    ax = vx * dt;
+		    ay = vy * dt;
+            bx = bilinearInterpolation(x0 + ax/2, y0 + ay/2, 0, loaded_timestep) * dt;
+            by = bilinearInterpolation(x0 + ax/2, y0 + ay/2, 1, loaded_timestep) * dt;
+            if (backward) {
+                bx = -bx;
+                by = -by;
+            }
+            cx = bilinearInterpolation(x0 + bx/2, y0 + by/2, 0, loaded_timestep) * dt;
+            cy = bilinearInterpolation(x0 + bx/2, y0 + by/2, 1, loaded_timestep) * dt;
+            if (backward) {
+                cx = -cx;
+                cy = -cy;
+            }
+            dx = bilinearInterpolation(x0 + cx, y0 + cy, 0, loaded_timestep) * dt;
+            dy = bilinearInterpolation(x0 + cx, y0 + cy, 1, loaded_timestep) * dt;
+            if (backward) {
+                dx = -dx;
+                dy = -dy;
+            }
+			x1 = x0 + (ax + 2*bx + 2*cx + dx) / 6;
+			y1 = y0 + (ay + 2*by + 2*cy + dy) / 6;
+			break;
+		}
+
+		// save line
+		streamline_point.push_back(x0);
+		streamline_point.push_back(y0);
+		streamline_point.push_back(x1);
+		streamline_point.push_back(y1);
+
+        if (x1 < 0 || vol_dim[0] <= x1 || y1 < 0 || vol_dim[1] <= y1) return;
+
+        // bilinear interpolation
+        vx = bilinearInterpolation(x1, y1, 0, loaded_timestep);
+        vy = bilinearInterpolation(x1, y1, 1, loaded_timestep);
+        s = sqrt(vx * vx + vy * vy);
+        if (s < threshold) return;
+        if (backward) {
+            vx = -vx;
+            vy = -vy;
+        }
+
+        // normalize
+        vx /= s;
+        vy /= s;
+
+		x0 = x1;
+		y0 = y1;
+	}
+}
+
+void computeStreamline(int x, int y)
 {
 	// TODO:
 	// compute streamlines starting from x,y position
 	// enable switching between euler and runge kutta
+    streamlineIntegration(x, y);
+    streamlineIntegration(x, y, true);
 }
 
-void computePathline( /* start point */)
+float trilinearInterpolation(float x, float y, int dim, float timestep)
+{
+	int timestepf = floor(timestep);
+	int timestepc = ceil(timestep);
+
+	float vf = bilinearInterpolation(x, y, dim, timestepf);
+	float vc = bilinearInterpolation(x, y, dim, timestepc);
+
+	return vf * (timestepc - timestep) + vc * (timestep - timestepf);
+}
+
+void pathlineIntegration(int x, int y, bool backward=false) {
+	float x0 = x;
+	float y0 = y;
+	if (x0 < 0 || vol_dim[0] <= x0 || y0 < 0 || vol_dim[1] <= y0) return;
+	float timestep = loaded_timestep;
+
+	float vx = vector_value(x0, y0, 0, loaded_timestep);
+	float vy = vector_value(x0, y0, 1, loaded_timestep);
+	float vz = vector_value(x0, y0, 2, loaded_timestep);
+	float s = sqrt(vx * vx + vy * vy + vz * vz);
+	if (s < threshold) return;
+	if (backward) {
+		vx = -vx;
+		vy = -vy;
+		vz = -vz;
+	}
+
+	// normalize
+	vx /= s;
+	vy /= s;
+	vz /= s;
+
+	for (int i = 0; i < max_iter; i++) {
+		float x1, y1, timestep1;
+		switch (integration) {
+		case RK2:
+            x1 = x0 + vx * dt / 2;
+            y1 = y0 + vy * dt / 2;
+			if (x1 < 0 || vol_dim[0] <= x1 || y1 < 0 || vol_dim[1] <= y1) return;
+			timestep1 = timestep + vz * dt / 2;
+            if (timestep1 < 0 || num_timesteps <= timestep1) return;
+
+            vx = trilinearInterpolation(x1, y1, 0, timestep1);
+            vy = trilinearInterpolation(x1, y1, 1, timestep1);
+            vz = trilinearInterpolation(x1, y1, 2, timestep1);
+			s = sqrt(vx * vx + vy * vy + vz * vz);
+			if (s < threshold) return;
+            if (backward) {
+                vx = -vx;
+                vy = -vy;
+                vz = -vz;
+            }
+
+            // normalize
+            vx /= s;
+            vy /= s;
+            vz /= s;
+
+			// next postion
+			x1 = x0 + vx * dt;
+			y1 = y0 + vy * dt;
+			break;
+		case EULER:
+			// next postion
+			x1 = x0 + vx * dt;
+			y1 = y0 + vy * dt;
+			break;
+		case RK4:
+			x1 = x0;
+			y1 = y0;
+			break;
+		}
+
+        // save line
+        pathline_point.push_back(x0);
+        pathline_point.push_back(y0);
+        pathline_point.push_back(x1);
+        pathline_point.push_back(y1);
+
+		if (x1 < 0 || vol_dim[0] <= x1 || y1 < 0 || vol_dim[1] <= y1) return;
+		timestep += vz * dt;
+		if (timestep < 0 || num_timesteps <= timestep) return;
+
+		vx = trilinearInterpolation(x1, y1, 0, timestep);
+		vy = trilinearInterpolation(x1, y1, 1, timestep);
+		vz = trilinearInterpolation(x1, y1, 2, timestep);
+		s = sqrt(vx * vx + vy * vy + vz * vz);
+		if (s < threshold) return;
+		if (backward) {
+			vx = -vx;
+			vy = -vy;
+			vz = -vz;
+		}
+
+		// normalize
+		vx /= s;
+		vy /= s;
+		vz /= s;
+
+        x0 = x1;
+        y0 = y1;
+	}
+}
+
+void computePathline(int x, int y)
 {
 	// TODO:
 	// compute pathlines starting from x,y position and time step t
 	// enable switching between euler and runge kutta
+	pathlineIntegration(x, y);
+	pathlineIntegration(x, y, true);
 }
 
 
@@ -426,7 +756,7 @@ void LoadVectorData(const char* filename)
 		fclose(fp);
 	}
 
-	int data_size = vol_dim[0] * vol_dim[1] * vol_dim[2];
+	data_size = vol_dim[0] * vol_dim[1] * vol_dim[2];
 
 	if (vector_array != NULL) {
 		delete[] vector_array;
@@ -646,6 +976,9 @@ void initGL(void) {
 
 void reset_rendering_props(void)
 {
+	seed_point.clear();
+	streamline_point.clear();
+	pathline_point.clear();
 	num_scalar_fields = 0;
 }
 

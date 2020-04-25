@@ -1,4 +1,3 @@
-
 #ifndef __CS247_Assignment5_h__
 #define __CS247_Assignment5_h__
 
@@ -74,9 +73,11 @@ int printOglError(char* file, int line);
 
 #define printOpenGLError() printOglError((char *)__FILE__, __LINE__)
 
-void computeStreamline( /* start point */);
+void drawGlyphs();
 
-void computePathline( /* start point */);
+void computeStreamline(int x, int y);
+
+void computePathline(int x, int y);
 
 void loadNextTimestep(void);
 
