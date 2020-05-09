@@ -108,6 +108,10 @@ void enableLIC(void) {
 	// a flag whether to overlay a scalar field or not, the LIC kernel size ...
 	//
 	// =============================================================================
+	int L_loc = glGetUniformLocation(lic_program, "L");
+	glUniform1i(L_loc, 50);
+	int scalar_toggle_loc = glGetUniformLocation(lic_program, "scalar_toggle");
+	glUniform1i(scalar_toggle_loc, scalar_overlay);
 
 }
 
@@ -541,7 +545,11 @@ void CreateNoiseField(void)
 	// Initialize white noise field
 	//
 	// =============================================================================
-
+	for (size_t i = 0; i < img_size; i++)
+	{
+		//noise_field[i] = (rand() % 256) / (float)255;
+		noise_field[i] = rand() % 2;
+	}
 }
 
 void InitTextures(void) {
@@ -617,22 +625,19 @@ void DownloadVectorFieldAs3DTexture(void)
 
 char* textFileRead(const char* fn) {
 
-	FILE* fp;
 	char* content = NULL;
 
-	int count = 0;
-
 	if (fn != NULL) {
-		fp = fopen(fn, "rt");
+		FILE* fp = fopen(fn, "rt");
 
 		if (fp != NULL) {
 
 			fseek(fp, 0, SEEK_END);
-			count = ftell(fp);
+			int count = ftell(fp);
 			rewind(fp);
 
 			if (count > 0) {
-				content = (char*)malloc(sizeof(char) * (count + 1));
+				content = new char[count + 1];
 				count = fread(content, sizeof(char), count, fp);
 				content[count] = '\0';
 			}
@@ -644,11 +649,9 @@ char* textFileRead(const char* fn) {
 
 void LoadAndLinkShader(void) {
 
-	char* fs = NULL;
-
 	lic_shader = glCreateShader(GL_FRAGMENT_SHADER);
 
-	fs = textFileRead("LIC.glsl");
+	const char* fs = textFileRead("LIC.glsl");
 
 	if (fs == NULL) {
 
@@ -656,11 +659,9 @@ void LoadAndLinkShader(void) {
 		exit(1);
 	}
 
-	const char* f1 = fs;
+	glShaderSource(lic_shader, 1, &fs, NULL);
 
-	glShaderSource(lic_shader, 1, &f1, NULL);
-
-	free(fs);
+	delete[] fs;
 
 	glCompileShader(lic_shader);
 
@@ -714,8 +715,8 @@ void ResetRenderingProperties(void)
 	enable_autocycle = 0;
 }
 
-/******************************************************************************/
-/*
+/******************************************************************************
+ *
  * Main
  *
  ******************************************************************************/
