@@ -10,6 +10,8 @@
 #include <ctime>
 
 #include "main.h"
+int kernel_size = 50;
+float blend_factor = 0.5;
 
 int printOglError(char* file, int line)
 {
@@ -108,11 +110,12 @@ void enableLIC(void) {
 	// a flag whether to overlay a scalar field or not, the LIC kernel size ...
 	//
 	// =============================================================================
-	int L_loc = glGetUniformLocation(lic_program, "L");
-	glUniform1i(L_loc, 50);
+    int L_loc = glGetUniformLocation(lic_program, "L");
+    glUniform1i(L_loc, kernel_size);
+    int blend_loc = glGetUniformLocation(lic_program, "blend");
+    glUniform1f(blend_loc, blend_factor);
 	int scalar_toggle_loc = glGetUniformLocation(lic_program, "scalar_toggle");
 	glUniform1i(scalar_toggle_loc, scalar_overlay);
-
 }
 
 void disableLIC(void) {
@@ -203,6 +206,22 @@ void key(unsigned char keyPressed, int x, int y) // key handling
 		NextClearColor();
 		fprintf(stderr, "Next clear color.\n");
 		break;
+	case '+':
+		kernel_size++;
+		fprintf(stderr, "Kernel size %d.\n", kernel_size);
+		break;
+	case '-':
+        kernel_size = kernel_size == 1 ? 1 : kernel_size-1;
+		fprintf(stderr, "Kernel size %d.\n", kernel_size);
+		break;
+	case 'z':
+        blend_factor = blend_factor-0.05 <= 0 ? 0 : blend_factor-0.05;
+		fprintf(stderr, "Blend factor %f.\n", blend_factor);
+		break;
+	case 'x':
+		blend_factor = blend_factor+0.05 >= 1 ? 1 : blend_factor+0.05;
+		fprintf(stderr, "Blend factor %f.\n", blend_factor);
+		break;
 	case 'q':
 	case 27:
 		exit(0);
@@ -217,6 +236,8 @@ void key(unsigned char keyPressed, int x, int y) // key handling
 			"r, enable scalar field visualization\n"
 			"n, next scalar field\n"
 			"b, switch background color\n"
+			"+, increase kernel size\n"
+			"-, decrease kernel size\n"
 			"q, <esc> - Quit\n",
 			filenames[0], filenames[1], filenames[2]);
 		break;
