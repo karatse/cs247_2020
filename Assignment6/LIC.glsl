@@ -3,7 +3,7 @@ uniform sampler3D scalar_field_3D;
 uniform sampler3D vector_field_3D;
 uniform sampler2D noise_field;
 
-// TODO: =======================================================================
+// =============================================================================
 //
 // Add custom uniforms and constants here
 //
@@ -20,12 +20,11 @@ float kernel_value(int i) {
 
 void main()
 {
-
-	// TODO: ===================================================================
-	//
-	// Implement LIC and colorcoded scalar field overlay
-	//
-	// =========================================================================
+    // =========================================================================
+    //
+    // Implement LIC and colorcoded scalar field overlay
+    //
+    // =========================================================================
     vec3 position = vec3(gl_TexCoord[0].st, 1);
     float kv = kernel_value(L/2);
     vec3 smoothed_value = kv * texture2D(noise_field, position);
